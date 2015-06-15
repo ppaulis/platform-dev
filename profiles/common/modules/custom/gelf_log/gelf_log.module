@@ -52,6 +52,17 @@ function gelf_log_admin()
             (512 is safe, 1500 is common and 8192 is the max)"),
         '#required' => true,
     );
+    $form['gelf_log_group'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Group name, for IDing the website in Kibana'),
+        '#default_value' => variable_get('gelf_log_group', 'no_group'),
+        '#size' => 10,
+        '#maxlength' => 254,
+        '#description' =>
+            t("Group name, for IDing/grouping the website in Kibana
+            (adds an additional _group field in the gelf packet)"),
+        '#required' => true,
+    );
     return system_settings_form($form);
 }
 
@@ -93,6 +104,7 @@ function gelf_log_format_error(array $error)
 
     $error['_application'] = 'drupal_gelf_log';
     $error['_website'] =  variable_get('site_name');
+    $error['_group'] = variable_get('gelf_log_group');
     return array_merge(
         array(
         /* GELF required fields : */
