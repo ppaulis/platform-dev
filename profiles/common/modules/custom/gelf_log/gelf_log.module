@@ -134,12 +134,38 @@ function gelf_log_send_packet($host,$port,array $error_event,$mtu)
      */
     $chunks = str_split($packet, $mtu);
     $total_chunks = count($chunks);
+
+    /**
+     * Gelf protocol specifies max 128 chunks :
+     */
+    if ($total_chunks > 128) {
+        /**
+         * We replace the error packet with "too big"
+         * We also add debug details on the packet size
+         */
+        $error_event = gelf_log_format_error(
+            array(
+                'type'=>'gelf_log',
+                'message'=> 'Gelf error packet is too big',
+                '_gelf_chunks' => $total_chunks,
+                '_gelf_mtu' => $mtu
+            )
+        );
+        $packet = gzcompress(
+            json_encode($error_event)
+        );
+        $chunks = str_split($packet, $mtu);
+        $total_chunks = count($chunks);
+    }
+
     $uniqid = gelf_log_get_unique_id(8);
+
     /* open a UDP sending socket */
     $socket = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
     if ($socket === false)
         // if the socket failed to be created, we return false ...
         return false;
+
     /**
      * And send packets 1 by 1, there's no support
      * for non-chunked packet, who cares ?
@@ -152,6 +178,7 @@ function gelf_log_send_packet($host,$port,array $error_event,$mtu)
         );
         //and send it :
         socket_sendto($socket, $udpPacket, strlen($udpPacket), 0, $host, $port);
+        // Note, no error to catch here, if it fails we can't do anything anyway
     }
     socket_close($socket);
 }
