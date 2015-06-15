@@ -65,7 +65,7 @@ function gelf_log_watchdog(array $error)
     /* format the packet from drupal error format */
     $errorPacket = gelf_log_format_error($error);
     /* chunk and send the GELF UDP packet */
-    gelf_log_send_packet($host, $port, $errorPacket,$mtu);
+    return gelf_log_send_packet($host, $port, $errorPacket,$mtu);
 }
 
 function gelf_log_format_error(array $error) 
@@ -137,6 +137,9 @@ function gelf_log_send_packet($host,$port,array $error_event,$mtu)
     $uniqid = gelf_log_get_unique_id(8);
     /* open a UDP sending socket */
     $socket = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
+    if ($socket === false)
+        // if the socket failed to be created, we return false ...
+        return false;
     /**
      * And send packets 1 by 1, there's no support
      * for non-chunked packet, who cares ?
