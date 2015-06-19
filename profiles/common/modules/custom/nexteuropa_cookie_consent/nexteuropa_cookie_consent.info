@@ -1,0 +1,15 @@
+name =  NextEuropa Cookie Consent
+description = Provides a client to connect remote entities to CouchDB via REST for the EU legislation on cookies.
+core = 7.x
+package = NextEuropa
+dependencies[] = field
+dependencies[] = remote_entity
+files[] = includes/nexteuropa_cookie_consent.clients.inc
+files[] = includes/nexteuropa_cookie_consent.controller.inc
+files[] = includes/nexteuropa_cookie_consent.query.inc
+files[] = includes/nexteuropa_cookie_consent.testing.inc
+
+files[] = includes/classes/DocumentWrapperInterface.php
+files[] = includes/classes/DocumentWrapper.php
+files[] = includes/classes/DocumentInterface.php
+files[] = includes/classes/Document.php

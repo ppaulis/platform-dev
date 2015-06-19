@@ -1,0 +1,386 @@
+<?php
+
+/**
+ * @file
+ * Provides all necessary functions for the EU legislation on cookies.
+ *
+ * @todo Finish all RemoteEntityQuery classes
+ * @todo Use wrappers in include/migrate to manipulate entity_data (get, set, render properties)
+ * @todo Finish the "Cookies" page
+ * @todo Keep couchDB in sync. Create a function to get inactive LOCAL entities and remove our site from the sites list in CouchDB. Call it on module_enable, module_disable and cron run
+ * @todo Provide a README.txt and an api.php
+ * @todo Provide admin config page OR variables for the connection url and other stuff if needed
+ * @todo Add some validation (when retrieving cookies, in Remote Entity Queries)
+ * @todo Add some caching (at least for nexteuropa_cookie_consent_page_alter) - drupal_static() or cache_set()
+ * @todo Finish all todos...
+ */
+
+// ================================= Drupal Core.
+
+/**
+ * Implements hook_menu().
+ */
+function nexteuropa_cookie_consent_menu() {
+  $items = array();
+
+  $items['cookie-notice-page'] = array(
+    'title' => 'Cookies',
+    'page callback' => 'nexteuropa_cookie_consent_page',
+    'access arguments' => array('access content'),
+    'file' => 'includes/nexteuropa_cookie_consent.pages.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_page_alter().
+ */
+function nexteuropa_cookie_consent_page_alter(&$page) {
+  // Skip cookie notice page.
+  if (current_path() == 'cookie-notice-page') {
+    return;
+  }
+
+  // Skip if the user is logged in.
+  if (user_is_logged_in()) {
+    return;
+  }
+
+  // Add global JS variables required by consent.js.
+  $registered_cookies = nexteuropa_cookie_consent_registered_cookies();
+  $consent_required_cookies = array('a' => $registered_cookies);
+  $cookie_notice_urls = _nexteuropa_cookie_consent_notice_urls();
+
+  $cck_script = 'var consent_required_cookies = ' . drupal_json_encode($consent_required_cookies) . ';';
+  $cck_script .= 'var cookie_notice_url = ' . str_replace('\\/', '/', drupal_json_encode($cookie_notice_urls)) . ';';
+  drupal_add_js($cck_script, array('type' => 'inline', 'group' => JS_LIBRARY - 100));
+
+  // Add external consent.js file.
+  $consent_js_url = 'http://ec.europa.eu/wel/cookie-consent/consent.js';
+  $consent_js = variable_get('nexteuropa_cookie_consent_consent_js_url', $consent_js_url);
+  drupal_add_js($consent_js, array('type' => 'external', 'group' => JS_LIBRARY - 100));
+}
+
+/**
+ * Implements hook_modules_disabled().
+ */
+function nexteuropa_cookie_consent_modules_disabled($modules) {
+}
+
+/**
+ * Implements hook_modules_enabled().
+ */
+function nexteuropa_cookie_consent_modules_enabled($modules) {
+}
+
+/**
+ * Implements hook_theme().
+ */
+function nexteuropa_cookie_consent_theme() {
+  return array(
+    'nexteuropa_cookie_consent_page' => array(
+      'template' => 'nexteuropa-cookie-consent-page',
+      'variables' => array('notice' => NULL, 'cookies' => NULL),
+    ),
+  );
+}
+
+// ================================= Clients.
+
+/**
+ * Implements hook_clients_connection_type_info().
+ */
+function nexteuropa_cookie_consent_clients_connection_type_info() {
+  return array(
+    'nexteuropa_cookie_consent_rest' => array(
+      'label' => t('NextEuropa Cookie Consent REST Services'),
+      'description' => t('Connects to our data service using REST endpoint.'),
+      'tests' => array(
+        'login' => 'ClientsConnectionNextEuropaCookieConsentTestConnection',
+      ),
+      'interfaces' => array(
+        'ClientsRemoteEntityInterface',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_clients_default_connections().
+ */
+function nexteuropa_cookie_consent_clients_default_connections() {
+  // @todo provide config for endpoint.
+  $connections['nexteuropa_cookie_consent_rest_connection'] = new clients_connection_nexteuropa_cookie_consent_rest(array(
+    'endpoint' => 'http://localhost:5985',
+    'configuration' => array(
+      'credentials_storage' => 'variables',
+    ),
+    'label' => 'NextEuropa Cookie Consent',
+    'type' => 'nexteuropa_cookie_consent_rest',
+  ), 'clients_connection');
+
+  return $connections;
+}
+
+/**
+ * Implements hook_clients_default_resources().
+ */
+function nexteuropa_cookie_consent_clients_default_resources() {
+  $resources['nexteuropa_cookie_consent'] = new clients_resource_remote_entity(array(
+    'component' => 'nexteuropa_cookie_consent',
+    'connection' => 'nexteuropa_cookie_consent_rest_connection',
+    'label' => 'Resource for remote cookies',
+    'type' => 'remote_entity',
+  ), 'clients_resource');
+
+  return $resources;
+}
+
+// ================================= Entity APIs.
+
+/**
+ * Implements hook_entity_info().
+ *
+ * @todo Add 'bundles' for different types of remote content (see Entity extensions like ECKEntity, RemoteEntity,...).
+ * @todo Need label callback, translation?
+ * @todo Add 'entity keys' => 'needs remote save' if remote saving required.
+ */
+function nexteuropa_cookie_consent_entity_info() {
+  $entities['nexteuropa_cookie_consent'] = array(
+    // Core properties.
+    'label' => t('NextEuropa Cookie Consent'),
+    'controller class' => 'RemoteEntityAPIDefaultController',
+    'base table' => 'nexteuropa_cookie_consent',
+    'label callback' => 'remote_entity_entity_label',
+    'fieldable' => FALSE,
+    'entity keys' => array(
+      'id' => 'eid',
+      'label' => '_id',
+      'bundle' => 'type',
+      'needs remote save' => 'needs_remote_save',
+    ),
+    'bundles' => array(
+      'cookie' => array(
+        'label' => t('Cookie'),
+        'remote entity conditions' => array(
+          'type' => 'cookie',
+        ),
+      ),
+      'cookie_notice' => array(
+        'label' => t('Cookie notice'),
+        'remote entity conditions' => array(
+          'type' => 'cookie_notice',
+        ),
+      ),
+    ),
+    'bundle keys' => array(
+      'bundle' => 'type',
+    ),
+    'view modes' => array(
+      'full' => array(
+        'label' => t('Full content'),
+        'custom settings' => FALSE,
+      ),
+    ),
+    // Entity API properties.
+    'entity class' => 'Entity',
+    'module' => 'nexteuropa_cookie_consent',
+    'metadata controller class' => 'RemoteEntityAPIDefaultMetadataController',
+    // Remote Entity API properties.
+    'remote base table' => 'csr', // @todo provide config.
+    'remote entity keys' => array(
+      'remote id' => '_id',
+      'label' => '_id',
+    ),
+    'expiry' => array(
+      // Number of seconds before a locally cached instance must be refreshed
+      // from the remote source.
+      'expiry time' => 600,
+      // A boolean indicating whether or not to delete expired local entities
+      // on cron.
+      'purge' => FALSE,
+    ),
+  );
+
+  // Get the property map data.
+  $property_info = _nexteuropa_cookie_consent_get_property_info();
+
+  // Assign each map to its corresponding entity.
+  foreach ($entities as $key => $einfo) {
+    $entities[$key]['property map'] = drupal_map_assoc(array_keys($property_info[$key]['properties']));
+  }
+
+  // Return all of the entity information.
+  return $entities;
+}
+
+/**
+ * Implements hook_entity_property_info_alter().
+ */
+function nexteuropa_cookie_consent_entity_property_info_alter(&$info) {
+  $info_add = _nexteuropa_cookie_consent_get_property_info();
+  $info = array_replace_recursive($info, $info_add);
+}
+
+/**
+ * Get remote property information for remote entities.
+ *
+ * @return array
+ *   An array of property information keyed by entity type.
+ */
+function _nexteuropa_cookie_consent_get_property_info() {
+  $info = array(
+    'nexteuropa_cookie_consent' => array(
+      // Already existing because of 'property map' defined
+      // but this allows us to change the type, label and description.
+      'properties' => array(
+        '_id' => array(
+          'label' => 'Cookie ID',
+          'type' => 'text',
+          'description' => 'The cookie ID.',
+        ),
+        '_rev' => array(
+          'label' => 'Revision ID',
+          'type' => 'text',
+          'description' => 'The revision ID.',
+        ),
+        'type' => array(
+          'label' => 'Type',
+          'type' => 'token',
+          'description' => 'The type of remote document.',
+        ),
+        'default_language' => array(
+          'label' => 'Default language',
+          'type' => 'language',
+          'description' => 'The default language.',
+        ),
+        'languages' => array(
+          'label' => 'Languages',
+          'type' => 'list<language>',
+          'description' => 'Available languages.',
+        ),
+      ),
+    ),
+  );
+
+  return $info;
+}
+
+// ================================= Helper functions.
+
+/**
+ * Returns all cookie notice page urls for each enabled language.
+ *
+ * @return array
+ *   An associative array of urls pointing to the cookie notice page,
+ *   keyed by language.
+ */
+function _nexteuropa_cookie_consent_notice_urls() {
+  $urls = array();
+
+  $languages = language_list('enabled');
+  $languages = $languages[1];
+  foreach ($languages as $language) {
+    $cookie_notice_url = url('cookie-notice-page', array('absolute' => TRUE, 'language' => $language));
+    $urls[$language->language] = $cookie_notice_url;
+  }
+
+  return $urls;
+}
+
+/**
+ * Returns all defined cookies from enabled modules.
+ *
+ * @return array
+ *   An associative array of all defined cookies, keyed by ID.
+ */
+function nexteuropa_cookie_consent_registered_cookies() {
+  $reg_cookies = array();
+
+  // Set default values (cannot be overridden).
+  $defaults = array(
+    'type' => 'cookie',
+    'managed' => FALSE,
+    'default_language' => 'en',
+  );
+
+  foreach (module_implements('nexteuropa_cookie_consent_register_cookies') as $module) {
+    $cookies = module_invoke($module, 'nexteuropa_cookie_consent_register_cookies');
+    foreach ($cookies as $key => $value) {
+      // In case we get a simple string.
+      if (!is_array($value)) {
+        $key = $value;
+        $value = array();
+      }
+
+      // Append values to default array.
+      $cookie = $defaults + $value;
+
+      // Append other options if not defined.
+      $cookie += array(
+        'module' => $module,
+        'domain' => 'europa',
+        'fields' => array(
+          'name' => array(
+            'en' => $key,
+          ),
+          'description' => array(
+            'en' => t('The information about the cookie %cookie_name will soon be available!', array('%cookie' => $key)),
+          ),
+        ),
+      );
+
+      $reg_cookies[$key] = $cookie;
+    }
+  }
+
+  return $reg_cookies;
+}
+
+/**
+ * Sync all cookies.
+ *
+ * Sync cookies between the remote server.
+ */
+function nexteuropa_cookie_consent_sync_cookies() {
+  $cookies = array();
+
+  $reg_cookies = nexteuropa_cookie_consent_registered_cookies();
+  foreach ($reg_cookies as $key => $value) {
+    $cookies += nexteuropa_cookie_consent_sync_cookie(array('_id' => $key) + $value);
+  }
+
+  return $cookies;
+}
+
+/**
+ * Sync a single cookie.
+ */
+function nexteuropa_cookie_consent_sync_cookie($cookie) {
+  $entities = NULL;
+  $entity_type = 'nexteuropa_cookie_consent';
+
+  /* @var $controller RemoteEntityAPIDefaultController */
+  $controller = entity_get_controller($entity_type);
+  $query = $controller->getRemoteEntityQuery(); // @todo Add bundle param.
+  $query->entityCondition('entity_id', $cookie['_id']);
+  try {
+    $entities = $controller->executeRemoteEntityQuery($query);
+    // @todo push or update.
+    /*if (empty($entities)) {
+      $entity = entity_create($entity_type, array(
+        'remote_id' => $cookie['_id'],
+        'entity_data' => (object) $cookie,
+        'needs_remote_save' => TRUE,
+      ));
+      entity_save($entity_type, $entity);
+      remote_entity_save($entity_type, $entity);
+    }*/
+  }
+  catch (Exception $e) {
+    watchdog('nexteuropa_cookie_consent', $e->getMessage());
+  }
+
+  return $entities;
+}

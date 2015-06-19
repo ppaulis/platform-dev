@@ -1,0 +1,66 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the NextEuropa Cookie Consent
+ * module.
+ */
+
+/**
+ * Implements hook_requirements().
+ */
+function nexteuropa_cookie_consent_requirements($phase) {
+  $requirements = array();
+  $t = get_t();
+  $curl_available = function_exists('curl_init');
+
+  $requirements['nexteuropa_cookie_consent_curl'] = array(
+    'title' => $t('NextEuropa Cookie Consent'),
+    'value' => $curl_available ? $t('cURL library Enabled') : $t('cURL library not found'),
+  );
+
+  if (!$curl_available) {
+    $requirements['nexteuropa_cookie_consent_curl'] += array(
+      'severity' => REQUIREMENT_ERROR,
+      'description' => $t('The NextEuropa Cookie Consent could not be installed because the PHP <a href="@curl_url">cURL</a> library is not available.', array('@curl_url' => 'http://php.net/manual/en/curl.setup.php')),
+    );
+  }
+
+  return $requirements;
+}
+
+/**
+ * Implements hook_schema().
+ */
+function nexteuropa_cookie_consent_schema() {
+  $schema = array(
+    'nexteuropa_cookie_consent' => remote_entity_schema_table('the remote cookie_consent entity type'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_enable().
+ */
+function nexteuropa_cookie_consent_enable() {
+  drupal_set_message(t('@name feature is now active on your site.', array(
+    '@name' => 'NextEuropa Cookie Consent',
+  )));
+}
+
+/**
+ * Implements hook_disable().
+ */
+function nexteuropa_cookie_consent_disable() {
+  drupal_set_message(t('@name feature is now disabled on your site.', array(
+    '@name' => 'NextEuropa Cookie Consent',
+  )));
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function nexteuropa_cookie_consent_uninstall() {
+  // @todo Delete variables.
+}

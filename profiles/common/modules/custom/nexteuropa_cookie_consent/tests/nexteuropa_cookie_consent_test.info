@@ -1,0 +1,6 @@
+name = NextEuropa Cookie Consent test module
+description = Support module for NextEuropa Cookie Consent module tests.
+version = VERSION
+core = 7.x
+dependencies[] = nexteuropa_cookie_consent
+hidden = TRUE
