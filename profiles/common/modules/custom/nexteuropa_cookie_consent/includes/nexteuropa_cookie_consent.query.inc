@@ -133,6 +133,29 @@ class NextEuropaCookieConsentInsertQuery extends RemoteEntityInsertQuery {
  * Update query for our remote data.
  */
 class NextEuropaCookieConsentUpdateQuery extends RemoteEntityUpdateQuery {
+
+  /**
+   * Execute the query.
+   */
+  public function execute() {
+    $wrapper = entity_metadata_wrapper($this->base_entity_type, $this->entity);
+    $path = $this->remote_base . '/' . $this->entity->remote_id;
+    $content = drupal_json_encode($wrapper->entity_data->raw());
+
+    // Save document.
+    $response = $this->connection->callMethodArray('PUT', array($path, $content));
+
+    // There was an error. Throw an exception!
+    if (!isset($response->id)) {
+      // Give a random failure id to avoid further saving issues.
+      $this->entity->remote_id = uniqid('remote-save-failed-', TRUE);
+      throw new Exception(t('Remote save failed: @error (@reason)',
+        array('@error' => $response->error, '@reason' => $response->reason)));
+    }
+
+    return $response;
+  }
+
 }
 
 /**
