@@ -77,6 +77,8 @@ class NextEuropaCookieConsentSelectQuery extends RemoteEntitySelectQuery {
     $path = $this->remote_base . '/_design/cookies/_rewrite/cookies';
     if (!empty($this->conditions)) {
       $entity_id = $this->conditions[$this->remote_base][0]['value'];
+      // @todo fix this hack
+      if (is_array($entity_id)) $entity_id = reset($entity_id);
       $path .= '/' . $entity_id;
     }
 
@@ -124,12 +126,6 @@ class NextEuropaCookieConsentSelectQuery extends RemoteEntitySelectQuery {
 }
 
 /**
- * Insert query for our remote data.
- */
-class NextEuropaCookieConsentInsertQuery extends RemoteEntityInsertQuery {
-}
-
-/**
  * Update query for our remote data.
  */
 class NextEuropaCookieConsentUpdateQuery extends RemoteEntityUpdateQuery {
@@ -138,9 +134,8 @@ class NextEuropaCookieConsentUpdateQuery extends RemoteEntityUpdateQuery {
    * Execute the query.
    */
   public function execute() {
-    $wrapper = entity_metadata_wrapper($this->base_entity_type, $this->entity);
     $path = $this->remote_base . '/' . $this->entity->remote_id;
-    $content = drupal_json_encode($wrapper->entity_data->raw());
+    $content = drupal_json_encode($this->entity->entity_data);
 
     // Save document.
     $response = $this->connection->callMethodArray('PUT', array($path, $content));
@@ -153,7 +148,25 @@ class NextEuropaCookieConsentUpdateQuery extends RemoteEntityUpdateQuery {
         array('@error' => $response->error, '@reason' => $response->reason)));
     }
 
-    return $response;
+    return (isset($response->id)) ? $response->id : FALSE;
+  }
+
+}
+
+/**
+ * Insert query for our remote data.
+ */
+class NextEuropaCookieConsentInsertQuery extends NextEuropaCookieConsentUpdateQuery {
+
+  /**
+   * Execute the query.
+   *
+   * The entity must already have been set with setEntity().
+   */
+  public function execute() {
+    // Just ensures the id isn't set then give it to the update handler.
+    $this->entity->remote_id = NULL;
+    return parent::execute();
   }
 
 }

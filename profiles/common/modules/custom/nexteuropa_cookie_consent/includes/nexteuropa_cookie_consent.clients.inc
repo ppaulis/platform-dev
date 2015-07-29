@@ -490,16 +490,77 @@ class clients_connection_nexteuropa_cookie_consent_rest
   // ============================= ClientsRemoteEntityInterface implementations.
 
   /**
-   * {@inheritdoc}
+   * Load a remote entity.
+   *
+   * The resource calling this should take care of process the data returned by
+   * this into a Drupal entity.
+   *
+   * @param string $entity_type
+   *   The entity type to load.
+   * @param string $remote_id
+   *   The (remote) ID of the entity.
+   *
+   * @return Entity
+   *   The remote entity data.
    */
-  public function remote_entity_load($entity_type, $id) {
+  public function remote_entity_load($entity_type, $remote_id) {
     $query = $this->getRemoteEntityQuery('select');
     $query->base($entity_type);
-    $query->entityCondition('entity_id', $id);
+    $query->entityCondition('entity_id', $remote_id);
     $result = $query->execute();
 
     // There's only one. Same pattern as entity_load_single().
-    return reset($result);
+    return current($result);
+  }
+
+  /**
+   * Load multiple remote entities.
+   *
+   * The resource calling this should take care of process the data returned by
+   * this into Drupal entities.
+   *
+   * @param string $entity_type
+   *   The entity type to load.
+   * @param array $remote_ids
+   *   An array of the (remote) entity IDs.
+   *
+   * @return array
+   *   The remote entity data. This is a numeric array in the same order as the
+   *   given array of remote IDs.
+   */
+  public function remote_entity_load_multiple($entity_type, $remote_ids) {
+    $query = $this->getRemoteEntityQuery('select');
+    $query->base($entity_type);
+    $query->entityCondition('entity_id', $remote_ids, 'IN');
+    $result = $query->execute();
+
+    return $result;
+  }
+
+  /**
+   * Save multiple entities remotely.
+   *
+   * @param string $entity_type
+   *   The entity type to save.
+   * @param array $entities
+   *   An array of entities to save in bulk, keyed by the entity ID.
+   * @param array $remote_properties
+   *   (Optional) An array of properties to save. Values should be names of
+   *   properties which are keys in the entity info 'property map' array. Only
+   *   applies when updating rather than inserting.
+   *
+   * @return array
+   *   An array of the remote GUIDs created by the operation, keyed by the
+   *   entity ID. Thus an entity which is updated rather than inserted will not
+   *   be present in the array.
+   */
+  public function remote_entity_save_multiple($entity_type, $entities, $remote_properties = array()) {
+    $query = $this->getRemoteEntityQuery('bulk_save');
+    $query->setEntities($entity_type, $entities);
+    $query->addFields($remote_properties);
+
+    // Execute the query. The guids array is keyed by entity ID.
+    return $query->execute();
   }
 
   /**

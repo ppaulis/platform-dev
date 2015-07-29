@@ -6,11 +6,8 @@
 function nexteuropa_cookie_consent_test_nexteuropa_cookie_consent_register_cookie() {
   return array(
     'override' => array(
-      'default_language' => 'en',
       'languages' => array('en'),
-      'domains' => array('overridden_domain'),
       'machine_name' => 'override_machine_name',
-      'managed' => FALSE,
       'fields' => array(
         'name' => array(
           'en' => 'overridden_name',
@@ -20,9 +17,9 @@ function nexteuropa_cookie_consent_test_nexteuropa_cookie_consent_register_cooki
         ),
       ),
       // Won't be overridden.
-      'type' => 'overridden schema',
-      'default' => 'overridden_default',
-      'version' => 'overridden version',
+      'type' => 'overridden_type',
+      'managed' => 'overridden_managed',
+      'default_language' => 'overridden_en',
     ),
     'avocado',
   );

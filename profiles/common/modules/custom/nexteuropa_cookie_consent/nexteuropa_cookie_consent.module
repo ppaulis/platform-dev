@@ -319,8 +319,7 @@ function nexteuropa_cookie_consent_registered_cookies() {
 
       // Append other options if not defined.
       $cookie += array(
-        'module' => $module,
-        'domain' => 'europa',
+        'languages' => array('en'),
         'fields' => array(
           'name' => array(
             'en' => $key,
@@ -348,7 +347,7 @@ function nexteuropa_cookie_consent_sync_cookies() {
 
   $reg_cookies = nexteuropa_cookie_consent_registered_cookies();
   foreach ($reg_cookies as $key => $value) {
-    $cookies += nexteuropa_cookie_consent_sync_cookie(array('_id' => $key) + $value);
+    $cookies[] = nexteuropa_cookie_consent_sync_cookie($key, $value);
   }
 
   return $cookies;
@@ -357,30 +356,57 @@ function nexteuropa_cookie_consent_sync_cookies() {
 /**
  * Sync a single cookie.
  */
-function nexteuropa_cookie_consent_sync_cookie($cookie) {
-  $entities = NULL;
+function nexteuropa_cookie_consent_sync_cookie($remote_id, $data) {
   $entity_type = 'nexteuropa_cookie_consent';
+  $resource = clients_resource_get_for_component('remote_entity', $entity_type);
 
-  /* @var $controller RemoteEntityAPIDefaultController */
-  $controller = entity_get_controller($entity_type);
-  $query = $controller->getRemoteEntityQuery(); // @todo Add bundle param.
-  $query->entityCondition('entity_id', $cookie['_id']);
   try {
-    $entities = $controller->executeRemoteEntityQuery($query);
-    // @todo push or update.
-    /*if (empty($entities)) {
-      $entity = entity_create($entity_type, array(
-        'remote_id' => $cookie['_id'],
-        'entity_data' => (object) $cookie,
-        'needs_remote_save' => TRUE,
-      ));
-      entity_save($entity_type, $entity);
-      remote_entity_save($entity_type, $entity);
-    }*/
+    // Load from local.
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', $entity_type)
+      ->propertyCondition('remote_id', $remote_id);
+    $result = $query->execute();
+
+    if (isset($result[$entity_type])) {
+      // Found a local entity.
+      $ids = array_keys($result[$entity_type]);
+      $entities = entity_load($entity_type, $ids);
+      $entity = reset($entities);
+
+      // The entity is on local and got updated using entity_load()? OK.
+      // The entity is on local but is not on remote? Push it.
+      $remote_entity = remote_entity_load_remote($entity_type, $remote_id);
+      if (empty($remote_entity)) {
+        // Remove the revision to avoid conflict and save it to remote.
+        unset($entity->entity_data->_rev);
+        remote_entity_save($entity_type, $entity);
+        // Reload it to get the revision.
+        $entity = $resource->remote_entity_load($remote_id);
+      }
+    }
+    else {
+      // Nothing found locally, try to fetch from remote.
+      $entity = $resource->remote_entity_load($remote_id);
+
+      if (empty($entity)) {
+        // Nothing found on remote, create a new entity.
+        $entity = entity_create($entity_type, array(
+          'remote_id' => $remote_id,
+          'type' => 'cookie',
+          'entity_data' => (object) $data,
+          'needs_remote_save' => TRUE,
+        ));
+
+        // Save it to remote.
+        remote_entity_save($entity_type, $entity);
+        // Reload it to get the revision.
+        $entity = $resource->remote_entity_load($remote_id);
+      }
+    }
   }
   catch (Exception $e) {
     watchdog('nexteuropa_cookie_consent', $e->getMessage());
   }
 
-  return $entities;
+  return $entity;
 }
