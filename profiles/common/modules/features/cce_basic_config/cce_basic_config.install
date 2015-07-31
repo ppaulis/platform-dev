@@ -1604,6 +1604,7 @@ function cce_basic_config_update_7205() {
  * NEXTEUROPA-4729: Disable and uninstall print_pdf_tcpdf module.
  */
 function cce_basic_config_update_7206() {
+  variable_set('print_pdf_pdf_tool', 'print_pdf_mpdf|sites/all/libraries/mpdf/mpdf.php');
   module_disable(array('print_pdf_tcpdf'), FALSE);
   drupal_uninstall_modules(array('print_pdf_tcpdf'), FALSE);
 }
