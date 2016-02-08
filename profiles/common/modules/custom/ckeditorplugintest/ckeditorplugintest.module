@@ -1,0 +1,39 @@
+<?php
+
+/*
+* Implement HOOK_wysiwyg_plugin
+*/
+function ckeditorplugintest_wysiwyg_plugin($editor, $version) {
+  $path = wysiwyg_get_path('ckeditor');
+
+  switch ($editor) {
+    case 'ckeditor':
+      return array(
+        'dialogui' => array(
+          'path' => $path . '/plugins/dialogui',
+          'buttons' => array('DialogGui' => t('DialogGUI')),
+          'url' => 'http://ckeditor.com/addon/dialogui',
+          'load' => TRUE,
+        ),
+		'lineutils' => array(
+          'path' => $path . '/plugins/lineutils',
+          'buttons' => array('Line utils' => t('Line utils')),
+          'url' => 'http://ckeditor.com/addon/lineutils',
+          'load' => TRUE,
+        ),
+		'widget' => array(
+          'path' => $path . '/plugins/widget',
+          'buttons' => array('widget' => t('widget')),
+          'url' => 'http://ckeditor.com/addon/widget',
+          'load' => TRUE,
+        ),
+		'widgetbootstrap' => array(
+          'path' => $path . '/plugins/widgetbootstrap',
+          'buttons' => array('widgetbootstrap' => t('widgetbootstrap')),
+          'url' => 'http://ckeditor.com/addon/widgetbootstrap',
+          'load' => TRUE,
+        ),
+      );
+    break;
+  }
+}

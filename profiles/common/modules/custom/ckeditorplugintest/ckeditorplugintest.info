@@ -1,0 +1,4 @@
+name = ckeditorplugintest
+description = Drupal....
+package = CK modules
+core = 7.x
