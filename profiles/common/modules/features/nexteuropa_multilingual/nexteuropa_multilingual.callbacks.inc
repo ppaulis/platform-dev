@@ -24,32 +24,30 @@ function nexteuropa_multilingual_language_negotiation_provider_callback($languag
 
 
 /**
- * Function nexteuropa_multilingual_language_negotiation_url_rewrite_callback.
+ * Rewrites URLs for the "NextEuropa URL suffix" language provider.
  *
- * @todo: Add documentation.
+ * Adds language suffix to urls. Based on locale_language_url_rewrite_url().
+ *
+ * @see url().
+ * @see locale_url_outbound_alter().
+ * @see locale_language_url_rewrite_url().
  */
 function nexteuropa_multilingual_language_negotiation_url_rewrite_callback(&$path, &$options) {
-  // Don't add the language suffix for an internal file URL.
-  $file_public = variable_get('file_public_path', conf_path() . '/files');
-  $file_private = variable_get('file_private_path');
-  if ($file_public && preg_match("#^/?$file_public#", $path) ||
-      $file_private && preg_match("#^/?$file_private#", $path)) {
-    return;
+  static $drupal_static_fast;
+  if (!isset($drupal_static_fast)) {
+    $drupal_static_fast['languages'] = &drupal_static(__FUNCTION__);
   }
+  $languages = &$drupal_static_fast['languages'];
 
-  $delimiter = variable_get('nexteuropa_multilingual_language_suffix_delimiter', '_');
-  $language_list = language_list('enabled');
-  $languages = $language_list[1];
+  if (!isset($languages)) {
+    $languages = language_list('enabled');
+    $languages = array_flip(array_keys($languages[1]));
+  }
 
   // Language can be passed as an option, or we go for current URL language.
   if (!isset($options['language'])) {
-    if (isset($options['attributes']['lang'])) {
-      $options['language'] = $language_list[1][$options['attributes']['lang']];
-    }
-    else {
-      global $language_url;
-      $options['language'] = $language_url;
-    }
+    global $language_url;
+    $options['language'] = $language_url;
   }
   // We allow only enabled languages here.
   elseif (!isset($languages[$options['language']->language])) {
@@ -57,30 +55,16 @@ function nexteuropa_multilingual_language_negotiation_url_rewrite_callback(&$pat
     return;
   }
 
-  // We don't add the language suffix if $path is empty.
-  // We don't force the frontpage URL to $path if $path is empty.
-  if (!empty($path)) {
-    $path = drupal_get_path_alias(($path == '<front>') ? variable_get('site_frontpage', 'node') : $path, $options['language']->language);
-
-    // Remove duplicate base_path in URL (NEXTEUROPA-9311).
-    // Temporary fix until the next version of the link module.
-    if (base_path() != '/' && strpos($path, base_path()) == 0) {
-      $path = str_replace(base_path(), '', $path);
-    }
-
-    $language_suffix = _nexteuropa_multilingual_get_language_suffix($options['language']);
-
-    // Check if the language suffix has been already added.
-    $check_prefix = nexteuropa_multilingual_language_negotiation_split_suffix($path, $languages);
-    if (!isset($check_prefix[0]->language)) {
-      $path .= $delimiter . $language_suffix;
-    }
-
+  if (!empty($path) && isset($options['language'])) {
+    $language = isset($options['language']) && isset($options['language']->language) ? $options['language']->language : '';
+    $path = drupal_get_path_alias($path == '<front>' ? variable_get('site_frontpage', 'node') : $path, $language);
     $options['alias'] = TRUE;
 
+    $delimiter = variable_get('nexteuropa_multilingual_language_suffix_delimiter', '_');
+    $language_suffix = _nexteuropa_multilingual_get_language_suffix($options['language']);
+    $path .= $delimiter . $language_suffix;
   }
 }
-
 
 /**
  * Extract the suffix from the path.
