@@ -28,9 +28,9 @@ function nexteuropa_multilingual_language_negotiation_provider_callback($languag
  *
  * Adds language suffix to urls. Based on locale_language_url_rewrite_url().
  *
- * @see url().
- * @see locale_url_outbound_alter().
- * @see locale_language_url_rewrite_url().
+ * @see url()
+ * @see locale_url_outbound_alter()
+ * @see locale_language_url_rewrite_url()
  */
 function nexteuropa_multilingual_language_negotiation_url_rewrite_callback(&$path, &$options) {
   static $drupal_static_fast;
