@@ -46,7 +46,7 @@ function _subscriptions_anonymous_validate($form, &$form_state) {
       ':module' => $module,
       ':field' => $field,
       ':value' => $value,
-      ':mail' => $mail
+      ':mail' => $mail,
     ))->fetchField();
     $is_email_saved = $is_email_saved + $sid;
   }
