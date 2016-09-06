@@ -84,8 +84,6 @@ function nexteuropa_core_install() {
   multisite_config_service('version_management')->enableVersionManagement('article');
   multisite_config_service('version_management')->enableVersionManagement('page');
 
-  // Enable translation of 'body' field by default.
-  multisite_config_service('field')->enableFieldTranslation('body');
 }
 
 /**
@@ -111,7 +109,8 @@ function nexteuropa_core_update_7002() {
  * NEXTEUROPA-10433: Enable translation of 'body' field.
  */
 function nexteuropa_core_update_7003() {
-  multisite_config_service('field')->enableFieldTranslation('body');
+  // NEXTEUROPA-13008: fallback to a untranslatable 'body' field.
+  // We do not remove the hook in order to keep a log of it.
 }
 
 /**
