@@ -89,7 +89,7 @@ function drush_body_fix_list_impacted_sites($timestamp = 1472562000) {
     if ($bundle_info) {
       foreach ($bundle_info as $machine_name => $content_nbr) {
         if ($content_nbr) {
-          drush_print(dt('@type - no content nbr with a filled body: @number', array('@type' => $machine_name, '@number' => $content_nbr)));
+          drush_print(dt('@type - number of content with a filled body: @number', array('@type' => $machine_name, '@number' => $content_nbr)));
         }
         else {
           drush_print(dt('@type: no content with a filled body', array('@type' => $machine_name)));
