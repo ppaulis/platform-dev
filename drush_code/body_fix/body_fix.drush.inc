@@ -13,7 +13,8 @@ function body_fix_drush_command() {
     'description' => 'List the sites impacted by the body translatable issue.',
     'aliases' => array('lis'),
     'options' => array(
-      'verbose' => 'Give a complete reports with problematic node data.',
+      'complete-report' => 'Give a complete reports with problematic node data (0 & 1).',
+      'list-revision-items' => 'List problematic records in revision table too (0 & 1).',
     ),
   );
 
@@ -24,8 +25,8 @@ function body_fix_drush_command() {
  * Drush command callback. drush_body_fix_list_impacted_sites.
  */
 function drush_body_fix_list_impacted_sites() {
-  $verbose = drush_get_option('verbose', 0);
-  $message_table_sep = ($verbose) ? ':' : '';
+  $complete_report = drush_get_option('complete-report', 0);
+  $message_table_sep = ($complete_report) ? ':' : '';
   require_once DRUPAL_ROOT . '/includes/install.inc';
   global $base_url;
   $site_name = variable_get('site_name', 'Unnamed site');
@@ -122,7 +123,7 @@ function drush_body_fix_list_impacted_sites() {
             drush_print('');
             drush_print(dt('>>> Orphans in the field DATA table: @amount on @total@separator', $param));
 
-            if ($verbose) {
+            if ($complete_report) {
               $values = array();
               $values[] = $header;
               foreach ($data as $orphan) {
@@ -140,14 +141,14 @@ function drush_body_fix_list_impacted_sites() {
 
           if ($field_checks['revision']) {
             $revision = $field_checks['revision'];
+            $list_revision_items = drush_get_option('list-revision-items', 0);
             $param = array(
               '@amount' => count($revision),
-              '@separator' => $message_table_sep,
+              '@separator' => ($list_revision_items) ? $message_table_sep : '',
             );
             drush_print('');
             drush_print(dt('>>> Orphans in the field REVISION table: @amount@separator', $param));
-
-            if ($verbose) {
+            if ($complete_report && $list_revision_items) {
               $values = array();
               $values[] = $header;
               foreach ($field_checks['revision'] as $orphan) {
@@ -188,12 +189,13 @@ function drush_body_fix_list_impacted_sites() {
     AND ( b1.body_value <> b2.body_value OR b1.body_summary <> b2.body_summary)");
 
   if (!empty($duplicates)) {
+    $row_count = $duplicates->rowCount();
     $param = array(
-      '@nr' => $duplicates->rowCount(),
+      '@nr' => $row_count,
       '@separator' => $message_table_sep,
     );
     drush_print(dt('NOK @nr contents found with duplicates in the field_body_table@separator', $param));
-    if ($verbose) {
+    if ($complete_report && $row_count) {
       $values = array();
       $values[] = array(
         dt('Content ID'),
