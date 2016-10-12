@@ -26,7 +26,7 @@ projects[drupal][patch][] = https://www.drupal.org/files/issues/2385069-19-drupa
 
 ; Move local configuration directives out of the Git repository.
 ; https://webgate.ec.europa.eu/CITnet/jira/browse/NEXTEUROPA-3154
-projects[drupal][patch][] = patches/default-settings-php-include-local-settings-3154.patch
+projects[drupal][patch][] = patches/default-settings-php-include-local-settings.patch
 
 ; Allow management of visibility for pseudo-fields.
 ; https://www.drupal.org/node/1256368
@@ -38,7 +38,7 @@ projects[drupal][patch][] = https://www.drupal.org/files/issues/drupal-n1256368-
 ; Allow DRUPAL_MAXIMUM_TEMP_FILE_AGE to be overridden.
 ; https://www.drupal.org/node/1399846
 ; https://webgate.ec.europa.eu/CITnet/jira/browse/MULTISITE-5641
-projects[drupal][patch][] = https://www.drupal.org/files/issues/cleanup-files-1399846-291.patch
+projects[drupal][patch][] = https://www.drupal.org/files/issues/cleanup-files-1399846-306.patch
 
 ; A validation error occurs for anonymous users when $form['#token'] == FALSE.
 ; https://www.drupal.org/node/1617918
