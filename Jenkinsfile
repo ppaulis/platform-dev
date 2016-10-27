@@ -12,7 +12,7 @@ node('master') {
         // run composer install
         sh 'composer install --no-suggest'
         // Build
-        sh './bin/phing build-platform-dev'
+        sh './bin/phing build-platform-dev -Dcomposer.bin=`which composer`'
     }
     
     // Testing stage
