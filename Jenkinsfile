@@ -19,6 +19,5 @@ node('master') {
     stage('phpcs') {
         // running all phpcs
         sh "./bin/phpcs"
-	}
     }
 }
